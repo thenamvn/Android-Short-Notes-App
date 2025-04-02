@@ -11,39 +11,39 @@
     <EditText
         android:id="@+id/titleEditText"
         android:layout_width="match_parent"
-        android:background="@drawable/edittext_bg"
         android:layout_height="46dp"
+        android:background="@drawable/edittext_bg"
+        android:hint="Note Title"
         android:paddingLeft="10dp"
-        android:textColor="@color/black"
-        android:hint="Note Title"/>
+        android:textColor="@color/black" />
 
     <EditText
+        android:id="@+id/contentEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Note Content"
         android:layout_marginTop="16dp"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp"
         android:background="@drawable/edittext_bg"
-        android:textColor="@color/black"
+        android:hint="Note Content"
         android:inputType="textMultiLine"
         android:minLines="5"
-        android:id="@+id/contentEditText"/>
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:textColor="@color/black" />
 
     <Button
         android:id="@+id/saveButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Save Notes"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="Save Notes" />
 
     <TextView
+        android:id="@+id/notesTextView"
         android:layout_width="match_parent"
         android:layout_height="18dp"
-        android:text="Notes:"
         android:layout_marginTop="16dp"
-        android:textStyle="bold"
-        android:id="@+id/notesTextView"/>
+        android:text="Notes:"
+        android:textStyle="bold" />
 
     <ScrollView
         android:id="@+id/notesScrollView"
@@ -51,11 +51,11 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/notesContainer"
-        android:orientation="vertical"/>
+        <LinearLayout
+            android:id="@+id/notesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
     </ScrollView>
 

