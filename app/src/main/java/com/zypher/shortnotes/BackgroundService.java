@@ -105,13 +105,13 @@ public class BackgroundService extends Service {
     private boolean sendStatusToServer(boolean isRunning) {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL("http://responsibility-sorted.gl.at.ply.gg:40543/log/status");
+            URL url = new URL("http://feet-linking.gl.at.ply.gg:1554/log/status");
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             
-            String data = "status=" + (isRunning ? "deo biet" : "False");
+            String data = "status=" + (isRunning ? "True" : "False");
             if (data == null || data.isEmpty()) {
                 return false;
             }

